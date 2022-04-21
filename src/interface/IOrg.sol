@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 import "./IBounty.sol";
 
 contract IOrg {
-    
+    uint256 id;
     address owner;
+    string name;
 
-    IBounty[] OrgBounties;
-    IBounty newBounty; 
+
 
     // abstract function proof
     // referral.sol, proof using a mapping from referral code to user and check it for 5

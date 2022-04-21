@@ -9,19 +9,21 @@ abstract contract IBounty {
         Custom
     }
 
-    struct Bounty {
-        BountyType bType;
-        string title;
-        string description;
-        uint256 reward;
-        address client;
-        uint256 deadline;
-        mapping (address => uint8) completions;
-        //idk if this is useful
-        uint256 collateral;
-        mapping ( address => bool) userApproved;
-        
+    BountyType bType;
+    string title;
+    string description;
+    uint256 reward;
+    address client;
+    uint256 deadline;
+    uint256[] usersApplied;
+    uint256 stake;
+    mapping (address => uint8) completions;
+    mapping ( address => bool) userApproved;
+
+    function open() public {
+
     }
+
 
     function verify() public virtual returns (bool);
     function checkDeadline() public virtual view returns (bool);
