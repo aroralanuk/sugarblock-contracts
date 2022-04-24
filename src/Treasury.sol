@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./Karma.sol";
+import "./KarmaToken.sol";
 
 contract Treasury is Ownable {
     // TODO: bonding/staking
 
-    Karma krmToken;
-    uint256 tokensPerEth = 100;
+    KarmaToken karma;
+    uint256 tokensPerEth = 10;
 
     event BuyTokens(address buyer, uint256 amountOfETH, uint256 amountOfTokens);
     event SellTokens(
@@ -17,11 +17,17 @@ contract Treasury is Ownable {
         uint256 amountOfTokens
     );
 
-    // contructor lets tresury mint token
-    constructor (address tokenAddress) public {
+    // contructor lets owner mint token
+    constructor() public {
         // supply 100 * 10 ** 18
         // 1000000000000000000
-        krmToken = Karma(tokenAddress);
+        // karma = KarmaToken(tokenAddress);
+        karma = new KarmaToken(1e21);
+
+    }
+
+    function getBalance(address q) public view returns (uint256) {
+        return karma.balanceOf(q);
     }
 
     // buy tokens from tresure
@@ -31,11 +37,11 @@ contract Treasury is Ownable {
         // console.log(tokensBuy);
 
         // check if vendor has enough tokens
-        uint256 vendorBal = krmToken.balanceOf(address(this));
+        uint256 vendorBal = karma.balanceOf(address(this));
         require(vendorBal >= tokensBuy, "insufficent tokens to purchase");
 
-        // Transfer token to the msg.sender
-        bool sent = krmToken.transfer(msg.sender, tokensBuy);
+        // // Transfer token to the msg.sender
+        bool sent = karma.transfer(msg.sender, tokensBuy);
         require(sent, "Failed to transfer token to user");
 
         emit BuyTokens(msg.sender, msg.value, tokensBuy);
@@ -45,7 +51,7 @@ contract Treasury is Ownable {
     function sellTokens(uint256 amt) public {
         require(amt > 0, "Amount should be greater than 0");
         require(
-            krmToken.balanceOf(msg.sender) >= amt,
+            karma.balanceOf(msg.sender) >= amt,
             "You don't have enough tokens"
         );
 
@@ -57,7 +63,7 @@ contract Treasury is Ownable {
 
         // required to approve token first
 
-        bool sent = krmToken.transferFrom(msg.sender, address(this), amt);
+        bool sent = karma.transferFrom(msg.sender, address(this), amt);
         require(sent, "Failed to transfer tokens from user to vendor");
 
         (sent, ) = msg.sender.call{value: amtInEth}("");

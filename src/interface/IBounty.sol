@@ -10,25 +10,37 @@ abstract contract IBounty {
     }
 
     BountyType bType;
+    address owner;
     string title;
     string description;
     uint256 reward;
-    address client;
     uint256 deadline;
     uint256[] usersApplied;
-    uint256 stake;
+    // uint256 stake;
     mapping (address => uint8) completions;
     mapping ( address => bool) userApproved;
+
+     constructor(BountyType _daType, address _owner, string memory _title, uint256 _reward, uint256 _deadline)  {
+        bType =  _daType;
+        owner = _owner;
+        bType = BountyType.Custom;
+        title = _title;
+        reward = _reward; 
+        deadline= _deadline;
+     }
+
 
     function open() public {
 
     }
 
 
-    function verify() public virtual returns (bool);
-    function checkDeadline() public virtual view returns (bool);
+    // function verify() public virtual returns (bool);
+    function checkDeadline() public view returns (bool){
+        return block.timestamp < deadline;
+    }
     // function stake() public payable virtual ();
     // function accept() public virtual ();
-    function complete() public virtual returns (bool);
-    function reward() public virtual payable returns (bool);
+    // function complete() public virtual returns (bool);
+    // function giveReward() public virtual payable returns (bool);
 }
