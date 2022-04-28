@@ -28,4 +28,8 @@ contract ContractTest is DSTest {
         assertEq(treasury.getBalance(deployer), 1e19);
         assertTrue(true);
     }
+
+    function testCreatOrg() public {
+        
+    }
 }

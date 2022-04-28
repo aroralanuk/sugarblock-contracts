@@ -26,15 +26,25 @@ contract KarmaMarketplace is ReentrancyGuard {
         orgs[orgId.current()] = newOrg;
     }
 
-    function listBounty(uint _orgId, string memory _title, uint256 _reward, uint256 _deadline) public onlyOrgOwner(_orgId) {
+    function listBounty(uint _orgId, string memory _title, uint256 _reward, uint256 _deadline, uint256 _stakeReqd) public onlyOrgOwner(_orgId) {
         require(_reward > 0, "ERROR: reward must be greater than 0");
         CustomBounty newBounty = new CustomBounty(msg.sender, _title, _reward, _deadline);
         bountyId.increment();
         bounties[bountyId.current()] = newBounty;
         bountyIdToOrg[bountyId.current()] = _orgId;
+
     }
 
-    // function openBounty(uint _bountyId) public onlyOrg(bountyIdToOrg[_bountyId]) {
-    //     bounties[_bountyId].open();
-    // }
+    function openBounty(uint _bountyId) public onlyOrg(bountyIdToOrg[_bountyId]) {
+        bounties[_bountyId].open();
+    }
+
+    function applyToBounty(uint _bountyId) public {
+        bounties[_bountyId].apply();
+    }
+
+    // TODO: add a function to pass in bounty verify function
+    function verifyBounty(uint _bountyId) public onlyOrg(bountyIdToOrg[_bountyId]) {
+        return bounties[_bountyId].verify();
+    }
 }

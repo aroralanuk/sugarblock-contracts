@@ -16,7 +16,8 @@ abstract contract IBounty {
     uint256 reward;
     uint256 deadline;
     uint256[] usersApplied;
-    // uint256 stake;
+    bool isOpen;
+    uint256 stakeReqd;
     mapping (address => uint8) completions;
     mapping ( address => bool) userApproved;
 
@@ -29,16 +30,34 @@ abstract contract IBounty {
         deadline= _deadline;
      }
 
-
-    function open() public {
-
-    }
-
-
-    // function verify() public virtual returns (bool);
+     // function verify() public virtual returns (bool);
     function checkDeadline() public view returns (bool){
         return block.timestamp < deadline;
     }
+
+
+    function open() public {
+        require(msg.sender == owner, "ERROR: not owner");
+        require(deadline > now, "ERROR: deadline has passed");
+        isOpen = true;
+    }
+
+    function stake () public {
+        require(isOpen, "ERROR: bounty is not open");
+        require(_stake > 0, "ERROR: stake must be greater than 0");
+    }
+
+
+    function apply() public {
+        require(isOpen, "ERROR: bounty is not open");
+        require(msg.sender != owner, "ERROR: cannot apply to own bounty");
+        require(checkDeadline(), "ERROR: deadline has passed");
+        require(completions[msg.sender] == 0, "ERROR: already applied");
+        usersApplied.push(msg.sender);
+        userApproved[msg.sender] = false;
+    }
+
+
     // function stake() public payable virtual ();
     // function accept() public virtual ();
     // function complete() public virtual returns (bool);
