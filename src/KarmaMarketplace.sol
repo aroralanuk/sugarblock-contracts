@@ -16,6 +16,8 @@ contract KarmaMarketplace is ReentrancyGuard {
     Counters.Counter private bountyId;
     Counters.Counter private orgId;
 
+    uint256 totalSupply;
+
     modifier onlyOrgOwner(uint _orgId) {
         require(msg.sender == orgs[_orgId].owner(),"ERROR: not org owner");
         _;
@@ -47,4 +49,13 @@ contract KarmaMarketplace is ReentrancyGuard {
     function verifyBounty(uint _bountyId) public onlyOrg(bountyIdToOrg[_bountyId]) {
         return bounties[_bountyId].verify();
     }
+
+    function donateToBounty(uint _bountyId, uint256 amount) external {
+        require(amount > 0, "ERROR: amount must be greater than 0");
+        totalSupply = totalSupply + amount;
+        // TODO: donate to bounty
+        bounties[_bountyId].donate(amount);
+    }
+
+    // donate to multiple bounties at once
 }
