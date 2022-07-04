@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/token/ERC20/IERC20.sol";
+
 abstract contract IBounty {
     address public tokenAddress;
 
@@ -16,7 +18,7 @@ abstract contract IBounty {
     string description;
     uint256 reward;
     uint256 deadline;
-    uint256[] usersApplied;
+    address[] usersApplied;
     bool isOpen;
     uint256 stakeReqd;
     mapping (address => bool) stakes;
@@ -47,19 +49,19 @@ abstract contract IBounty {
 
     function open() public {
         require(msg.sender == owner, "ERROR: not owner");
-        require(deadline > now, "ERROR: deadline has passed");
+        require(deadline > block.timestamp, "ERROR: deadline has passed");
         isOpen = true;
     }
 
     function stake (uint256 _tokenAmount) public {
         require(isOpen, "ERROR: bounty is not open");
         require(checkDeadline(), "ERROR: deadline has passed");
-        require(_tokenAmount >= _stake, "ERROR: not enough stake");
+        require(_tokenAmount >= stakeReqd, "ERROR: not enough stake");
         require(!stakes[msg.sender], "ERROR: already staked");
 
         
-        IERC20(_tokenAddress).approve(address(this), _tokenAmount);    // TODO: set approve only first time
-        IERC20(_tokenAddress).transferFrom(msg.sender, address(this), amount);
+        IERC20(tokenAddress).approve(address(this), _tokenAmount);    // TODO: set approve only first time
+        IERC20(tokenAddress).transferFrom(msg.sender, address(this),  _tokenAmount);
         stakes[msg.sender] = true;
 
     }
@@ -73,13 +75,13 @@ abstract contract IBounty {
         require(isOpen, "ERROR: bounty is not open");
         require(checkDeadline(), "ERROR: deadline has passed");
 
-        IERC20(_tokenAddress).approve(address(this), _tokenAmount);    // TODO: set approve only first time
-        IERC20(_tokenAddress).transferFrom(msg.sender, address(this), amount);
+        IERC20(tokenAddress).approve(address(this), _tokenAmount);    // TODO: set approve only first time
+        IERC20(tokenAddress).transferFrom(msg.sender, address(this), _tokenAmount);
         donations[msg.sender] = donations[msg.sender] + _tokenAmount;
     }
 
 
-    function apply(uint256 _stakeAmount)  public {
+    function applyTo(uint256 _stakeAmount) public {
         require(isOpen, "ERROR: bounty is not open");
         require(msg.sender != owner, "ERROR: cannot apply to own bounty");
         require(checkDeadline(), "ERROR: deadline has passed");
@@ -89,6 +91,10 @@ abstract contract IBounty {
         require(stakedAlready(), "ERROR: must stake before applying");
         usersApplied.push(msg.sender);
         userApproved[msg.sender] = false;
+    }
+
+    function verify() public returns (bool) {
+        return true;
     }
 
 

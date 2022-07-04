@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
-import "openzeppelin-contracts/contracts/utils/Counters.sol";
+import "@openzeppelin/security/ReentrancyGuard.sol";
+import "@openzeppelin/utils/Counters.sol";
 
 import "./interface/IOrg.sol";
 import "./specific-tasks/CustomBounty.sol";
@@ -22,6 +22,7 @@ contract KarmaMarketplace is ReentrancyGuard {
         require(msg.sender == orgs[_orgId].owner(),"ERROR: not org owner");
         _;
     }
+
     function createOrg(string memory _name) public {
         orgId.increment();
         IOrg newOrg = new IOrg(orgId.current(), _name);
@@ -37,16 +38,16 @@ contract KarmaMarketplace is ReentrancyGuard {
 
     }
 
-    function openBounty(uint _bountyId) public onlyOrg(bountyIdToOrg[_bountyId]) {
+    function openBounty(uint _bountyId) public onlyOrgOwner(bountyIdToOrg[_bountyId]) {
         bounties[_bountyId].open();
     }
 
-    function applyToBounty(uint _bountyId) public {
-        bounties[_bountyId].apply();
+    function applyToBounty(uint _bountyId, uint _stakeAmount) public {
+        bounties[_bountyId].applyTo(_stakeAmount);
     }
 
     // TODO: add a function to pass in bounty verify function
-    function verifyBounty(uint _bountyId) public onlyOrg(bountyIdToOrg[_bountyId]) {
+    function verifyBounty(uint _bountyId) public onlyOrgOwner(bountyIdToOrg[_bountyId]) returns (bool){
         return bounties[_bountyId].verify();
     }
 
