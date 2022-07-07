@@ -1,6 +1,5 @@
 make --dry-run --always-make --keep-going --print-directory
 make: Entering directory `/Users/kunalarora/dev/future/hack/karma-contracts'
+forge install
 make: Leaving directory `/Users/kunalarora/dev/future/hack/karma-contracts'
  
-make: *** No targets specified and no makefile found.  Stop.
-

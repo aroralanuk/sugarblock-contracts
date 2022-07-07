@@ -4,13 +4,11 @@ pragma solidity ^0.8.0;
 import "./IBounty.sol";
 
 contract IOrg {
-    uint256 public id;
     address public owner;
-    string name;
+    string public name;
 
-    constructor(uint _id,string memory _name) public {
-        id = _id;
-        owner = msg.sender;
+    constructor(string memory _name, address _owner) public {
+        owner = _owner;
         name = _name;
     }
 

@@ -25,7 +25,7 @@ contract KarmaMarketplace is ReentrancyGuard {
 
     function createOrg(string memory _name) public {
         orgId.increment();
-        IOrg newOrg = new IOrg(orgId.current(), _name);
+        IOrg newOrg = new IOrg(_name, msg.sender);
         orgs[orgId.current()] = newOrg;
     }
 
