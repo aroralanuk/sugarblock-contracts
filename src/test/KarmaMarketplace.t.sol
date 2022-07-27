@@ -6,13 +6,12 @@ import "forge-std/console2.sol";
 import "forge-std/Vm.sol";
 import "forge-std/console.sol";
 
-import { IOrg } from "../interface/IOrg.sol";
-import { IBounty } from "../interface/IBounty.sol";
-import { KarmaToken } from "../KarmaToken.sol";
-import { CustomBounty } from "../specific-tasks/CustomBounty.sol";
-import { Treasury } from "../Treasury.sol";
-import { KarmaMarketplace } from "../KarmaMarketplace.sol";
-
+import {IOrg} from "../interface/IOrg.sol";
+import {IBounty} from "../interface/IBounty.sol";
+import {KarmaToken} from "../KarmaToken.sol";
+import {CustomBounty} from "../specific-tasks/CustomBounty.sol";
+import {Treasury} from "../Treasury.sol";
+import {KarmaMarketplace} from "../KarmaMarketplace.sol";
 
 contract ContractTest is DSTest {
     Vm private vm = Vm(HEVM_ADDRESS);
@@ -23,7 +22,7 @@ contract ContractTest is DSTest {
     KarmaMarketplace public marketplace = new KarmaMarketplace();
 
     function setUp() public {
-
+        marketplace.createOrg("Celo");
     }
 
     function testExample() public {
@@ -37,26 +36,19 @@ contract ContractTest is DSTest {
     }
 
     function testCreatOrg() public {
-        marketplace.createOrg("Celo");
         IOrg _celo = marketplace.orgs(1);
-        
         assertEq(_celo.name(), "Celo");
         assertEq(_celo.owner(), deployer);
     }
 
     function testListBounty() public {
-        marketplace.createOrg("Donut");
-        IOrg _donut = marketplace.orgs(1);
         marketplace.listBounty(1, "Eat Donut", 1, 2, 3);
         IBounty _sample = marketplace.bounties(1);
         assertEq(marketplace.bountyIdToOrg(1), 1);
         assertEq(_sample.title(), "Eat Donut");
-       
     }
 
     function testCheckDeadline() public {
-        marketplace.createOrg("Donut");
-        IOrg _donut = marketplace.orgs(1);
         marketplace.listBounty(1, "Eat Donut", 1, 1000000000, 0);
         IBounty _sample = marketplace.bounties(1);
         vm.warp(999999999);
@@ -66,8 +58,6 @@ contract ContractTest is DSTest {
     }
 
     function testOpenBounty() public {
-        marketplace.createOrg("Donut");
-        IOrg _donut = marketplace.orgs(1);
         marketplace.listBounty(1, "Eat Donut", 1, 1000000000, 0);
         IBounty _sample = marketplace.bounties(1);
         assertTrue(!_sample.isOpen());
@@ -76,5 +66,4 @@ contract ContractTest is DSTest {
 
         // marketplace.openBounty(1) does not work because caller is not the owner ( == deployer ). How to simulate this?
     }
-    
 }
