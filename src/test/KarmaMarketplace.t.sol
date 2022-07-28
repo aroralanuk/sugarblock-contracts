@@ -6,12 +6,12 @@ import "forge-std/console2.sol";
 import "forge-std/Vm.sol";
 import "forge-std/console.sol";
 
-import {IOrg} from "../interface/IOrg.sol";
-import {IBounty} from "../interface/IBounty.sol";
-import {KarmaToken} from "../KarmaToken.sol";
-import {CustomBounty} from "../specific-tasks/CustomBounty.sol";
-import {Treasury} from "../Treasury.sol";
-import {KarmaMarketplace} from "../KarmaMarketplace.sol";
+import { IOrg } from "../interface/IOrg.sol";
+import { IBounty } from "../interface/IBounty.sol";
+import { KarmaToken } from "../KarmaToken.sol";
+import { CustomBounty } from "../specific-tasks/CustomBounty.sol";
+import { Treasury } from "../Treasury.sol";
+import { KarmaMarketplace } from "../KarmaMarketplace.sol";
 
 contract ContractTest is DSTest {
     Vm private vm = Vm(HEVM_ADDRESS);
