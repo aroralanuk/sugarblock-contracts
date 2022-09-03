@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.15;
 
-import "@openzeppelin/security/ReentrancyGuard.sol";
 import "@openzeppelin/utils/Counters.sol";
 
 import "./interface/IOrg.sol";
-import "./specific-tasks/CustomBounty.sol";
+import "./Bounty.sol";
 
-contract KarmaMarketplace is ReentrancyGuard {
-    mapping(uint => IOrg) public orgs; 
+contract SBFactory {
+    mapping(uint => IOrg) public orgs;
     mapping (uint => IBounty) public bounties;
     mapping (uint => uint) public bountyIdToOrg;
 
