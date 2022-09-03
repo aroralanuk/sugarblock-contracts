@@ -12,14 +12,15 @@ abstract contract IBounty {
         Custom
     }
 
+    // Should we make these attributes public/private?
     BountyType bType;
-    address owner;
-    string title;
-    string description;
-    uint256 reward;
-    uint256 deadline;
+    address public owner;
+    string public title;
+    string public description;
+    uint256 public reward;
+    uint256 public deadline;
     address[] usersApplied;
-    bool isOpen;
+    bool public isOpen;
     uint256 stakeReqd;
     mapping (address => bool) stakes;
     mapping (address => uint256) donations;
@@ -99,6 +100,7 @@ abstract contract IBounty {
 
 
     // function stake() public payable virtual ();
+    // function close() public virtual ();
     // function accept() public virtual ();
     // function complete() public virtual returns (bool);
     // function giveReward() public virtual payable returns (bool);
