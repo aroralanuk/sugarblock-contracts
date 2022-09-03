@@ -1,31 +1,45 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.15;
 
-import "./IBounty.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
-contract IOrg {
-    address public owner;
+import { AccessControl } from "./OrgAdmin.sol";
+
+contract Org is AccessControl {
+    using Counters for Counters.Counter;
+    struct Bounty {
+        string title;
+        uint256 stakeReqd;
+        uint256 deadline;
+        bool open;
+        address[] applicants;
+    }
+
     string public name;
+    mapping(uint256 => Bounty) public bounties;
+    uint256 totalBounties;
 
+    Counters.Counter private bountyId;
+    mapping(uint256 => mapping(address => uint256)) applicantStakes;
+    mapping(uint256 => mapping(address => bool)) applicantVerified;
 
+    event BountyCreated(uint256 indexed orgId, uint256 indexed bountyId, string title, uint256 deadline);
 
-    constructor(string memory _name, address _owner) public {
-        owner = _owner;
+    constructor(string memory _name, address _deployer, uint256 _orgId) AccessControl(_orgId, _deployer) public {
         name = _name;
     }
 
+    function createBounty(string calldata _title, uint256 _stakeReqd, uint256 _deadline) public onlyAdmin {
+        require(_deadline > block.timestamp, "ERROR: deadline must be in the future");
+        address[] memory emptyApps;
+        Bounty memory newBounty = Bounty(_title,_stakeReqd, _deadline, false, emptyApps);
+        bountyId.increment();
+        bounties[bountyId.current()] = newBounty;
+        emit BountyCreated(orgId, bountyId.current(), _title, _deadline);
+    }
 
-    // abstract function proof
-    // referral.sol, proof using a mapping from referral code to user and check it for 5
-
-    // function createTask(TaskType _type, string title)
-
-    // function listBounty (string _title, uint256 _reward, uint256 _deadline) public payable {
-    //     newBounty = new Bounty({ title: _title, reward: _reward, deadline: _deadline});
-    //     OrgBounties.push(newBounty);
-    // }
-
-
-
-
+    function openBounty(uint256 _bountyId) public onlyAdmin {
+        require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
+        bounties[bountyId.current()].open = true;
+    }
 }
