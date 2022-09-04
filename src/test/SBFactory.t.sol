@@ -49,6 +49,19 @@ contract SBFactoryTest is BaseTest {
         redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
     }
 
+    function testCreateBountyFail_DiffAdmin() public {
+        Org redCross = factory.orgs(0);
+        Org gitcoin = factory.orgs(1);
+        gitcoin.transferAdmin(adele);
+
+        vm.startPrank(adele);
+        gitcoin.createBounty("Build a DAO dashboard", 1e16, block.timestamp + 7 days);
+
+        vm.expectRevert("ERROR: caller is not the admin");
+        redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
+        vm.stopPrank();
+    }
+
     function testOpenBounty() public {
         Org redCross = factory.orgs(0);
         redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
