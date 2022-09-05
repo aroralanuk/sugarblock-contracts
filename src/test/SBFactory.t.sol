@@ -35,7 +35,7 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
         uint256 bountyDeadline = block.timestamp + 7 days;
         redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
-        ( string memory title, uint256 stakeReqd, uint256 deadline, bool open ) = redCross.bounties(1);
+        ( string memory title, uint256 stakeReqd, , uint256 deadline, bool open ) = redCross.bounties(1);
         assertEq(title, "Help the poor");
         assertEq(stakeReqd, 1e16);
         assertEq(deadline, bountyDeadline);
@@ -66,7 +66,7 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
         redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
         redCross.openBounty(1);
-        ( , , , bool open ) = redCross.bounties(1);
+        ( , , , , bool open ) = redCross.bounties(1);
         assertEq(open, true);
     }
 }
