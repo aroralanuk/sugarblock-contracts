@@ -1,37 +1,72 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.15;
 
-import "ds-test/test.sol";
+import "./helpers/BaseTest.sol";
 import "forge-std/console2.sol";
 import "forge-std/Vm.sol";
 import "forge-std/console.sol";
 
-import { Org } from "../IOrg.sol";
+import { Org } from "../Org.sol";
 import { SBToken } from "../SBToken.sol";
-import { Treasury } from "../Treasury.sol";
 import { SBFactory } from "../SBFactory.sol";
 
 
-contract SBFactory is DSTest {
-    Vm private vm = Vm(HEVM_ADDRESS);
+contract SBFactoryTest is BaseTest {
+    // Vm private vm = Vm(HEVM_ADDRESS);
     address public deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
 
-    Treasury public treasury = new Treasury();
     SBFactory public factory = new SBFactory();
 
     function setUp() public {
-
+        factory.createOrg("RedCross");
+        factory.createOrg("Gitcoin");
+        factory.createOrg("WorldCoin");
     }
 
     function testCreatOrg() public {
-        marketplace.createOrg("Celo");
-        IOrg _celo = marketplace.orgs(1);
+        factory.createOrg("Celo");
+        Org _celo = factory.orgs(3);
 
         assertEq(_celo.name(), "Celo");
-        assertEq(_celo.owner(), deployer);
+        assertEq(_celo.admin(), deployer);
     }
 
-    function testOrgAccess() public {
+    function testCreateBounty() public {
+        Org redCross = factory.orgs(0);
+        uint256 bountyDeadline = block.timestamp + 7 days;
+        redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
+        ( string memory title, uint256 stakeReqd, , uint256 deadline, bool open ) = redCross.bounties(1);
+        assertEq(title, "Help the poor");
+        assertEq(stakeReqd, 1e16);
+        assertEq(deadline, bountyDeadline);
+        assertEq(open, false);
+    }
 
+    function testCreateBountyFail_NotAdmin() public {
+        Org redCross = factory.orgs(0);
+        vm.prank(adele);
+        vm.expectRevert("ERROR: caller is not the admin");
+        redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
+    }
+
+    function testCreateBountyFail_DiffAdmin() public {
+        Org redCross = factory.orgs(0);
+        Org gitcoin = factory.orgs(1);
+        gitcoin.transferAdmin(adele);
+
+        vm.startPrank(adele);
+        gitcoin.createBounty("Build a DAO dashboard", 1e16, block.timestamp + 7 days);
+
+        vm.expectRevert("ERROR: caller is not the admin");
+        redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
+        vm.stopPrank();
+    }
+
+    function testOpenBounty() public {
+        Org redCross = factory.orgs(0);
+        redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
+        redCross.openBounty(1);
+        ( , , , , bool open ) = redCross.bounties(1);
+        assertEq(open, true);
     }
 }

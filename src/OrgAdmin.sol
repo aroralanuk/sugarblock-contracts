@@ -10,7 +10,7 @@ pragma solidity 0.8.15;
  * `onlyAdmin`, which can be applied to your functions to restrict their use to
  * the admin.
  */
-abstract contract OrgAdmin {
+abstract contract AccessControl {
     uint256 public orgId;
     bool private _paused;
     address private _admin;
@@ -55,18 +55,7 @@ abstract contract OrgAdmin {
      * @dev Throws if the sender is not the admin.
      */
     function _checkAdmin() internal view virtual {
-        require(admin() == msg.sender, "Ownable: caller is not the admin");
-    }
-
-    /**
-     * @dev Leaves the contract without admin. It will not be possible to call
-     * `onlyAdmin` functions anymore. Can only be called by the current admin.
-     *
-     * NOTE: Renouncing admin will leave the contract without an admin,
-     * thereby removing any functionality that is only available to the admin.
-     */
-    function renounceAdmin() public virtual onlyAdmin {
-        _transferAdmin(address(0));
+        require(admin() == msg.sender, "ERROR: caller is not the admin");
     }
 
     /**
@@ -74,7 +63,7 @@ abstract contract OrgAdmin {
      * Can only be called by the current admin.
      */
     function transferAdmin(address newAdmin) public virtual onlyAdmin whenNotPaused {
-        require(newOwner != address(0), "Ownable: new admin is the zero address");
+        require(newAdmin != address(0), "ERROR: new admin is the zero address");
         _transferAdmin(newAdmin);
     }
 
@@ -85,7 +74,7 @@ abstract contract OrgAdmin {
     function _transferAdmin(address newAdmin) internal virtual {
         address oldAdmin = _admin;
         _admin = newAdmin;
-        emit aDMINTransferred(oldAdmin, newAdmin);
+        emit AdminContolTransferred(oldAdmin, newAdmin);
     }
 
     /**
@@ -107,15 +96,15 @@ abstract contract OrgAdmin {
      */
     function _pause() external virtual whenNotPaused onlyAdmin {
         _paused = true;
-        emit Paused(orgId, _owner);
+        emit OrgPaused(orgId, _admin);
     }
 
     /**
      * @dev Returns to normal state. Can only be called by the current admin.
      */
-    function _unpause() external virtual whenPaused onlyAdmin {
+    function _unpause() external virtual onlyAdmin {
         _paused = false;
-        emit Unpaused(orgId, _owner);
+        emit OrgUnpaused(orgId, _admin);
     }
 
 }
