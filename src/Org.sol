@@ -4,14 +4,15 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 import { AccessControl } from "./OrgAdmin.sol";
-import { SwapRouter } from "./util/SwapRouter.sol";
+import { OrgRouter } from "./util/OrgRouter.sol";
+
+import "forge-std/console.sol";
 
 contract Org is AccessControl {
     using Counters for Counters.Counter;
     struct Bounty {
         string title;
         uint256 stakeReqd;
-        uint256 dontaions;
         uint256 deadline;
         bool open;
         address[] applicants;
@@ -21,25 +22,39 @@ contract Org is AccessControl {
     mapping(uint256 => Bounty) public bounties;
     uint256 totalBounties;
 
-    // TODO: config file for different chains
-    address usdcTokenAddress = 0xe6b8a5CF854791412c1f6EFC7CAf629f5Df1c747;
-    address uniV3SwapRouterAddress = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address usdcTokenAddress;
+    address orgRouterAddress;
 
     Counters.Counter private bountyId;
-    mapping(uint256 => mapping(address => uint256)) applicantStakes;
-    mapping(uint256 => mapping(address => bool)) applicantVerified;
+    mapping(uint256 => mapping(address => uint256)) public applicantStakes;
+    mapping(uint256 => mapping(address => bool)) public applicantVerified;
+    mapping(uint256 => mapping(address => uint256)) public donations;
 
-    SwapRouter public uniV3Router;
+    OrgRouter public orgRouter;
 
     event BountyCreated(uint256 indexed orgId, uint256 indexed bountyId, string title, uint256 deadline);
 
     constructor (
         string memory _name,
         address _deployer,
-        uint256 _orgId
+        uint256 _orgId,
+        address orgRouter,
+        address usdc
     ) AccessControl(_orgId, _deployer) public {
         name = _name;
-        uniV3Router = new SwapRouter(uniV3SwapRouterAddress, usdcTokenAddress);
+        config(orgRouter, usdc);
+    }
+
+    /**
+     * @dev Configures the swap router and usdc token address
+     */
+    function config(
+        address _orgRouterAddress,
+        address _usdcTokenAddress
+    ) internal {
+        orgRouterAddress = _orgRouterAddress;
+        usdcTokenAddress = _usdcTokenAddress;
+        orgRouter = OrgRouter(_orgRouterAddress);
     }
 
     /**
@@ -55,7 +70,7 @@ contract Org is AccessControl {
     ) public onlyAdmin {
         require(_deadline > block.timestamp, "ERROR: deadline must be in the future");
         address[] memory emptyApps;
-        Bounty memory newBounty = Bounty(_title,_stakeReqd, 0, _deadline, false, emptyApps);
+        Bounty memory newBounty = Bounty(_title,_stakeReqd, _deadline, false, emptyApps);
         bountyId.increment();
         bounties[bountyId.current()] = newBounty;
         emit BountyCreated(orgId, bountyId.current(), _title, _deadline);
@@ -83,8 +98,10 @@ contract Org is AccessControl {
     ) external {
         require(_amount > 0, "ERROR: amount must be greater than 0");
         require(bounties[_bountyId].open, "ERROR: bounty must be open");
-        uniV3Router.setinputToken(_depositTokenAddress);
+        require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
 
-        bounties[_bountyId].dontaions = bounties[_bountyId].dontaions + _amount;
+        orgRouter.setinputToken(_depositTokenAddress);
+        uint256 amountOut = orgRouter.swapExactInputSingle(_amount, msg.sender);
+        donations[_bountyId][msg.sender] += amountOut;
     }
 }

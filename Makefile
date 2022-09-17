@@ -13,3 +13,4 @@ trace   :; forge test -vvv
 clean  :; forge clean
 snapshot :; forge snapshot
 fmt    :; forge fmt
+test-mainnet :; forge test --fork-url ${MAINNET_RPC_URL} --etherscan-api-key {ETHERSCAN_API_KEY} -vvvv
