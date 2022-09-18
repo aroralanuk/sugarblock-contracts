@@ -10,6 +10,14 @@ import { Org } from "../Org.sol";
 import { SBToken } from "../SBToken.sol";
 import { SBFactory } from "../SBFactory.sol";
 
+import { MockWETH } from "./helpers/MockWETH.sol";
+
+import {
+    WETH,
+    USDC,
+    UNI_ROUTER
+} from "../Constants.sol";
+
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 
@@ -20,21 +28,20 @@ contract SBFactoryTest is BaseTest {
 
     address internal deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
 
-    address internal usdcAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address internal uniTokenAddress = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
-
-    address internal uniswapV3SwapRouter = 	0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address internal orgRouterAddress;
     SBFactory internal factory;
 
-
     function setUp() public {
-        factory = new SBFactory(uniswapV3SwapRouter, usdcAddress);
+        factory = new SBFactory(UNI_ROUTER, USDC);
         orgRouterAddress = factory.getOrgRouter();
 
         factory.createOrg("RedCross");
         factory.createOrg("Gitcoin");
         factory.createOrg("WorldCoin");
+
+        // _depositWeth(address(this), 1000);
+        // _depositWeth(adele, 1000);
+        // _depositWeth(bob, 1000);
     }
 
     function testCreatOrg() public {
@@ -97,43 +104,69 @@ contract SBFactoryTest is BaseTest {
         assertEq(open, true);
     }
 
-    function testDonate_USDC() public {
+    // function testDonate_USDC() public {
+    //     Org redCross = factory.orgs(0);
+    //     redCross.createBounty(
+    //         "Help the poor",
+    //         1e16,
+    //         block.timestamp + 7 days
+    //     );
+    //     redCross.openBounty(1);
+    //     vm.startPrank(adele);
+    //     console.log("adele address: ", adele);
+    //     console.log("org address: ", address(redCross));
+    //     console.log("org router address: ", orgRouterAddress);
+    //     (bool success, bytes memory result) = USDC.call(
+    //         abi.encodeWithSignature(
+    //             "approve(address,uint256)",
+    //             orgRouterAddress,
+    //             1000e6
+    //         )
+    //     );
+    //     assertTrue(success);
+    //     assertEq(ERC20(USDC).allowance(adele, address(redCross)), 1000e18);
+    //     redCross.donateToBounty(1, USDC, 100e6);
+    //     vm.stopPrank();
+
+    //     ( uint256 amount ) = redCross.donations(1, adele);
+    //     assertEq(amount, 100e6);
+    // }
+
+    function testDonate_WETH() public {
         Org redCross = factory.orgs(0);
-        redCross.createBounty(
-            "Help the poor",
-            1e16,
-            block.timestamp + 7 days
-        );
+        redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
         redCross.openBounty(1);
+
         vm.startPrank(adele);
-        console.log("adele address: ", adele);
-        console.log("org address: ", address(redCross));
-        console.log("org router address: ", orgRouterAddress);
-        (bool success, bytes memory result) = usdcAddress.call(
+        (bool success, bytes memory result) = WETH.call(
             abi.encodeWithSignature(
                 "approve(address,uint256)",
                 orgRouterAddress,
-                1000e6
+                1000e18
             )
         );
         assertTrue(success);
-        assertEq(ERC20(usdcAddress).allowance(adele, address(redCross)), 1000e18);
-        redCross.donateToBounty(1, usdcAddress, 100e6);
+
+        assertEq(ERC20(WETH).allowance(adele, orgRouterAddress), 1000e18);
+        console.log("allowance: ", ERC20(WETH).allowance(adele, orgRouterAddress));
+        redCross.donateToBounty(1, WETH, 1e18);
         vm.stopPrank();
 
         ( uint256 amount ) = redCross.donations(1, adele);
-        assertEq(amount, 100e6);
+        assertTrue(amount > 1e6);
     }
 
-    // function testDonate_18decimal() public {
-    //     Org redCross = factory.orgs(0);
-    //     redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
-    //     redCross.openBounty(1);
+    /**************************************************************************
+     *                                HELPERS                                 *
+     *************************************************************************/
 
-    //     vm.prank(adele);
-    //     redCross.donateToBounty(1, uniTokenAddress, 1000e18);
+    function _depositWeth(address recipient, uint256 ethAmount) internal {
+        // check that VB has no WETH balance
+        uint256 wethBalance0 = IERC20(WETH).balanceOf(recipient);
+        assertEq(wethBalance0, 0);
 
-    //     ( uint256 amount ) = redCross.donations(1, adele);
-    //     assertEq(amount, 100e18);
-    // }
+        // deposit ETH in recipient account
+        vm.prank(recipient);
+        MockWETH(WETH).deposit{value: ethAmount}();
+    }
 }
