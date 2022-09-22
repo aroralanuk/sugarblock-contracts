@@ -44,9 +44,13 @@ contract SBFactoryTest is BaseTest {
         factory.createOrg("Gitcoin");
         factory.createOrg("WorldCoin");
 
-        // _depositWeth(address(this), 1000);
-        // _depositWeth(adele, 1000);
-        // _depositWeth(bob, 1000);
+        Org redCross = factory.orgs(0);
+        redCross.createBounty(
+            "COVID-19 drug discovery research",
+            1000e6,
+            block.timestamp + 7 days
+        );
+        redCross.openBounty(1);
     }
 
     function testCreatOrg() public {
@@ -61,16 +65,20 @@ contract SBFactoryTest is BaseTest {
 
         Org redCross = factory.orgs(0);
         uint256 bountyDeadline = block.timestamp + 7 days;
-        redCross.createBounty("Help the poor", 1e16, block.timestamp + 7 days);
+        redCross.createBounty(
+            "Safe transport of vaccines in Libya",
+            1e16,
+            block.timestamp + 7 days
+        );
 
         (
             string memory title,
             uint256 stakeReqd,
             uint256 deadline,
             bool open
-        ) = redCross.bounties(1);
+        ) = redCross.bounties(2);
 
-        assertEq(title, "Help the poor");
+        assertEq(title, "Safe transport of vaccines in Libya");
         assertEq(stakeReqd, 1e16);
         assertEq(deadline, bountyDeadline);
         assertEq(open, false);
@@ -98,11 +106,6 @@ contract SBFactoryTest is BaseTest {
 
     function testOpenBounty() public {
         Org redCross = factory.orgs(0);
-        redCross.createBounty(
-            "Help the poor",
-            1e16,
-            block.timestamp + 7 days
-        );
         redCross.openBounty(1);
 
         ( , , , bool open ) = redCross.bounties(1);
@@ -112,20 +115,13 @@ contract SBFactoryTest is BaseTest {
     function testDonate_USDC() public {
         Org redCross = factory.orgs(0);
 
-        redCross.createBounty(
-            "Help the poor",
-            1e16,
-            block.timestamp + 7 days
-        );
-        redCross.openBounty(1);
-
         vm.startPrank(adele);
 
-        (bool success, bytes memory result) = USDC.call(
+        (bool success, ) = USDC.call(
             abi.encodeWithSignature(
                 "approve(address,uint256)",
                 orgRouterAddress,
-                1000e6
+                1200e6
             )
         );
         assertTrue(success);
@@ -136,25 +132,19 @@ contract SBFactoryTest is BaseTest {
 
         ( uint256 amount ) = redCross.donations(1, adele);
         assertEq(amount, 1000e6);
+        assertEq(ERC20(USDC).balanceOf(address(redCross)), 1000e6);
     }
 
     function testDonate_DAI() public {
         Org redCross = factory.orgs(0);
 
-        redCross.createBounty(
-            "Help the poor",
-            1e16,
-            block.timestamp + 7 days
-        );
-        redCross.openBounty(1);
-
         vm.startPrank(adele);
 
-        (bool success, bytes memory result) = DAI.call(
+        (bool success, ) = DAI.call(
             abi.encodeWithSignature(
                 "approve(address,uint256)",
                 orgRouterAddress,
-                1000e6
+                1200e6
             )
         );
         assertTrue(success);
@@ -164,26 +154,32 @@ contract SBFactoryTest is BaseTest {
         vm.stopPrank();
 
         ( uint256 amount ) = redCross.donations(1, adele);
-        assertApproxEqRel(amount, _quotePrice(DAI, USDC, 1000e6), SLIPPAGE_TOLERANCE);
+
+        uint256 quote = _quotePrice(DAI, USDC, 1200e6);
+        assertApproxEqRel(
+            amount,
+            quote,
+            SLIPPAGE_TOLERANCE
+        );
+
+        assertApproxEqRel(
+            ERC20(USDC).balanceOf(address(redCross)),
+            quote,
+            SLIPPAGE_TOLERANCE
+        );
     }
 
     function testDonate_WETH() public {
         Org redCross = factory.orgs(0);
 
-        redCross.createBounty(
-            "Help the poor",
-            1e16,
-            block.timestamp + 7 days
-        );
-        redCross.openBounty(1);
 
         vm.startPrank(adele);
 
-        (bool success, bytes memory result) = WETH.call(
+        (bool success, ) = WETH.call(
             abi.encodeWithSignature(
                 "approve(address,uint256)",
                 orgRouterAddress,
-                1000e18
+                1e18
             )
         );
         assertTrue(success);
@@ -193,7 +189,103 @@ contract SBFactoryTest is BaseTest {
         vm.stopPrank();
 
         ( uint256 amount ) = redCross.donations(1, adele);
-        assertApproxEqRel(amount, _quotePrice(WETH, USDC, 1e18), SLIPPAGE_TOLERANCE);
+
+        uint256 quote = _quotePrice(WETH, USDC, 1e18);
+        assertApproxEqRel(
+            amount,
+            quote,
+            SLIPPAGE_TOLERANCE
+        );
+
+        assertApproxEqRel(
+            ERC20(USDC).balanceOf(address(redCross)),
+            quote,
+            SLIPPAGE_TOLERANCE
+        );
+    }
+
+    function testApply_success() public {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+
+        (bool success, ) = USDC.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                1200e6
+            )
+        );
+        assertTrue(success);
+
+        console.log("Allowance: ", ERC20(USDC).allowance(bob, orgRouterAddress));
+
+        redCross.applyToBounty(1, USDC, 1200e6);
+
+        vm.stopPrank();
+
+        ( Org.AppStatus status ) = redCross.applicantStatus(1, bob);
+        assertEq(uint256(status), 1);
+
+        assertEq(ERC20(USDC).balanceOf(address(redCross)), 1000e6);
+    }
+
+    function testApply_successWETH() public {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+
+        uint256 bal0 = ERC20(WETH).balanceOf(bob);
+
+        (bool success, ) = WETH.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                1e18
+            )
+        );
+        assertTrue(success);
+
+        console.log("Allowance: ", ERC20(WETH).allowance(bob, orgRouterAddress));
+
+        redCross.applyToBounty(1, WETH, 1e18);
+
+        vm.stopPrank();
+
+        uint256 bal1 = ERC20(WETH).balanceOf(bob);
+
+        ( Org.AppStatus status ) = redCross.applicantStatus(1, bob);
+        assertEq(uint256(status), 1);
+
+        assertApproxEqRel(
+            ERC20(USDC).balanceOf(address(redCross)),
+            1000e6,
+            SLIPPAGE_TOLERANCE
+        );
+
+        assertApproxEqRel(
+            bal0 - bal1,
+             _quotePrice(USDC, WETH, 1000e6),
+            SLIPPAGE_TOLERANCE
+        );
+    }
+
+    function testApply_AdminFail() external {
+        Org redCross = factory.orgs(0);
+
+        (bool success, ) = USDC.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                1200e6
+            )
+        );
+        assertTrue(success);
+
+        vm.expectRevert("ERROR: admin cannot apply to own bounty");
+        redCross.applyToBounty(1, USDC, 1200e6);
+
+        vm.stopPrank();
     }
 
     /**************************************************************************

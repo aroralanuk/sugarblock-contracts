@@ -18,6 +18,13 @@ contract Org is AccessControl {
         address[] applicants;
     }
 
+    enum AppStatus {
+        NONE,
+        APPLIED,
+        VERIFIED,
+        REJECTED
+    }
+
     string public name;
     mapping(uint256 => Bounty) public bounties;
     uint256 totalBounties;
@@ -26,8 +33,8 @@ contract Org is AccessControl {
     address orgRouterAddress;
 
     Counters.Counter private bountyId;
-    mapping(uint256 => mapping(address => uint256)) public applicantStakes;
-    mapping(uint256 => mapping(address => bool)) public applicantVerified;
+    mapping(uint256 => mapping(address => AppStatus)) public applicantStatus;
+    mapping(uint256 => mapping(address => bytes32)) public submittedHashes;
     mapping(uint256 => mapping(address => uint256)) public donations;
 
     OrgRouter public orgRouter;
@@ -38,12 +45,27 @@ contract Org is AccessControl {
         string memory _name,
         address _deployer,
         uint256 _orgId,
-        address orgRouter,
+        address _orgRouter,
         address usdc
     ) AccessControl(_orgId, _deployer) public {
         name = _name;
-        config(orgRouter, usdc);
+        config(_orgRouter, usdc);
     }
+
+    /**************************************************************************
+     * Modifiers
+     *************************************************************************/
+
+    modifier prelimChecks(uint256 _bountyId) {
+        require(bounties[_bountyId].open, "ERROR: bounty must be open");
+        require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
+        _;
+    }
+
+    /**************************************************************************
+     * Core Functions
+     *************************************************************************/
+
 
     /**
      * @dev Configures the swap router and usdc token address
@@ -81,7 +103,9 @@ contract Org is AccessControl {
      * @param _bountyId Id of the bounty to open
      */
     function openBounty(uint256 _bountyId) public onlyAdmin {
+
         require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
+
         bounties[bountyId.current()].open = true;
     }
 
@@ -95,13 +119,77 @@ contract Org is AccessControl {
         uint256 _bountyId,
         address _depositTokenAddress,
         uint256 _amount
-    ) external {
+    ) prelimChecks(_bountyId) external {
+
         require(_amount > 0, "ERROR: amount must be greater than 0");
-        require(bounties[_bountyId].open, "ERROR: bounty must be open");
-        require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
 
         orgRouter.setinputToken(_depositTokenAddress);
         uint256 amountOut = orgRouter.swapExactInputSingle(_amount, msg.sender);
+
         donations[_bountyId][msg.sender] += amountOut;
+    }
+
+    /**
+     * @notice Applies to a bounty
+     * @param _bountyId Id of the bounty to apply to
+     * @param _stakeTokenAddress Address of the token applicant wants to stake
+     * @param _maxAmountInStaked Max amount of tokens appliant wants to swap and stake
+     */
+    function applyToBounty (
+        uint256 _bountyId,
+        address _stakeTokenAddress,
+        uint256 _maxAmountInStaked
+    ) prelimChecks(_bountyId) external {
+
+        require(msg.sender != admin(), "ERROR: admin cannot apply to own bounty");
+        require(applicantStatus[_bountyId][msg.sender] == AppStatus.NONE, "ERROR: applicant already applied");
+
+        orgRouter.setinputToken(_stakeTokenAddress);
+        uint256 amountIn = orgRouter.swapExactOutputSingle(
+            bounties[_bountyId].stakeReqd,
+            _maxAmountInStaked,
+            msg.sender
+        );
+
+        applicantStatus[_bountyId][msg.sender] = AppStatus.APPLIED;
+        bounties[_bountyId].applicants.push(msg.sender);
+
+    }
+
+    /**
+     * @notice applicant submits hash of their work
+     * @param _bountyId Id of the bounty to apply to
+     * @param _submissionHash bytes32 cast of the IPFS hash of the IPFS applicant's work
+     * @dev IPFS hash cast from bytes58 -> bytes32 to store on-chain
+     */
+    function submitBounty (
+        uint _bountyId,
+        bytes32 _submissionHash
+    ) prelimChecks(_bountyId) external {
+
+        require(
+            applicantStatus[_bountyId][msg.sender] == AppStatus.APPLIED, "ERROR: applicant must have applied"
+        );
+
+        submittedHashes[_bountyId][msg.sender] = _submissionHash;
+    }
+
+    /**
+     * @notice Verifies an applicant's work
+     * @param _bountyId Id of the bounty to apply to
+     * @param _applicant Address of the applicant to verify
+     * @param _verified bool is the org admin can verify the applicant's work
+     */
+    function verifyBounty (
+        uint _bountyId,
+        address _applicant,
+        bool _verified
+    ) prelimChecks(_bountyId) external onlyAdmin {
+
+        require(
+            applicantStatus[_bountyId][_applicant] == AppStatus.APPLIED, "ERROR: applicant must have applied"
+        );
+
+        applicantStatus[_bountyId][_applicant] = AppStatus(_verified ? 3 : 4);
     }
 }

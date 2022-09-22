@@ -9,6 +9,7 @@ address constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 // uniswap deployments
 address constant UNI_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 address constant UNI_QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
+address constant UNI_POOL = 0xa63b490aA077f541c9d64bFc1Cc0db2a752157b5;
 
 // constant coefficients
 uint256 constant SLIPPAGE_TOLERANCE = 1e17;      // out of 1e18

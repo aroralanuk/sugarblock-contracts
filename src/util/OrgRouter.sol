@@ -8,13 +8,17 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import "forge-std/console.sol";
 
+import {
+    USDC,
+    UNI_POOL
+} from "../Constants.sol";
+
 contract OrgRouter {
 
     ISwapRouter public immutable swapRouter;
 
     address public inputToken;
     ERC20 public inputERC20;
-    address public immutable USDC;
 
     uint24 public constant poolFee = 3000;
 
@@ -32,7 +36,6 @@ contract OrgRouter {
      */
     constructor(address _swapRouter, address _usdcToken) {
         swapRouter = ISwapRouter(_swapRouter);
-        USDC = _usdcToken;
     }
 
     /**
@@ -54,19 +57,12 @@ contract OrgRouter {
 
         // Transfer straight to org if input token is USDC
         if (inputToken == USDC) {
-             console.log("WORKING SAME TOKEN");
-             console.log("Allowance: ", ERC20(inputToken).allowance(donor, address(this)));
-             console.log("Balance of: ", inputERC20.balanceOf(donor));
             TransferHelper.safeTransferFrom(USDC, donor, msg.sender, amountIn);
             return amountIn;
         }
 
-        console.log("EARLY WORKING");
-
         // Else transfer the specified amount of input token to this contract.
         TransferHelper.safeTransferFrom(inputToken, donor, address(this), amountIn);
-
-        console.log("WORKING");
 
         // Approve the router to spend input token.
         TransferHelper.safeApprove(inputToken, address(swapRouter), amountIn);
@@ -92,4 +88,59 @@ contract OrgRouter {
 
     }
 
+    /// @notice swapExactOutputSingle swaps a minimum possible amount of input token for a fixed amount of USDC.
+    /// @dev The calling address must approve this contract to spend its input token for this function to succeed. As the amount of input DAI is variable,
+    /// the calling address will need to approve for a slightly higher amount, anticipating some variance.
+    /// @param amountOut The exact amount of USDC to receive from the swap.
+    /// @param amountInMaximum The amount of input token we are willing to spend to receive the specified amount of USDC.
+    /// @return amountIn The amount of  USDC actually spent in the swap.
+    function swapExactOutputSingle(uint256 amountOut, uint256 amountInMaximum, address applicant) external returns (uint256 amountIn) {
+
+        // Transfer straight to org if input token is USDC
+        if (inputToken == USDC) {
+            TransferHelper.safeTransferFrom(USDC, applicant, msg.sender, amountOut);
+            return amountOut;
+        }
+
+        // Transfer the specified amount of input token to this contract.
+        TransferHelper.safeTransferFrom(inputToken, applicant, address(this), amountInMaximum);
+
+        console.log("amount with org Router: ", ERC20(inputToken).balanceOf(address(this)));
+
+
+        // Approve the router to spend the specifed `amountInMaximum` of input token.
+        // In production, you should choose the maximum amount to spend based on oracles or other data sources to acheive a better swap.
+        TransferHelper.safeApprove(inputToken, address(swapRouter), amountInMaximum);
+
+        console.log("Allowance for uni router: ", inputERC20.allowance(address(this), address(swapRouter)));
+        console.log("from org router: ", address(this), " to ", address(swapRouter));
+
+        ISwapRouter.ExactOutputSingleParams memory params =
+            ISwapRouter.ExactOutputSingleParams({
+                tokenIn: inputToken,
+                tokenOut: USDC,
+                fee: poolFee,
+                recipient: msg.sender,
+                deadline: block.timestamp,
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                sqrtPriceLimitX96: 0
+            });
+
+        console.log("DIS WOKRING", amountIn);
+
+
+        // Executes the swap returning the amountIn needed to spend to receive the desired amountOut.
+        amountIn = swapRouter.exactOutputSingle(params);
+
+        console.log("DIS also  WORKING");
+
+        // For exact output swaps, the amountInMaximum may not have all been spent.
+        // If the actual amount spent (amountIn) is less than the specified maximum amount, we must refund the applicant and approve the swapRouter to spend 0.
+
+        if (amountIn < amountInMaximum) {
+            TransferHelper.safeApprove(inputToken, address(swapRouter), 0);
+            TransferHelper.safeTransfer(inputToken, applicant, amountInMaximum - amountIn);
+        }
+    }
 }

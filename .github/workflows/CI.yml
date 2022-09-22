@@ -17,4 +17,4 @@ jobs:
           version: nightly
 
       - name: Run tests
-        run: forge test -vvv
+        run: forge test --fork-url ${secrets.MAINNET_RPC_URL} --etherscan-api-key {secrets.ETHERSCAN_API_KEY} -vvv
