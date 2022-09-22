@@ -2,6 +2,12 @@
 pragma solidity 0.8.15;
 
 import "forge-std/Test.sol";
+import {
+    WETH,
+    USDC,
+    DAI
+} from "../../Constants.sol";
+
 
 contract BaseTest is Test
 {
@@ -20,6 +26,10 @@ contract BaseTest is Test
             ))
         );
         vm.label(lAddress, aName);
+
+        deal(WETH, lAddress, 1000e18);
+        deal(USDC, lAddress, 1000e18);
+        deal(DAI, lAddress, 1000e18);
 
         return lAddress;
     }
