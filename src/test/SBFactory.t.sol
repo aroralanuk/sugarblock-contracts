@@ -50,7 +50,13 @@ contract SBFactoryTest is BaseTest {
             1000e6,
             block.timestamp + 7 days
         );
+        redCross.createBounty(
+            "Safe transport of vaccines in Libya",
+            1e16,
+            block.timestamp + 7 days
+        );
         redCross.openBounty(1);
+        redCross.openBounty(2);
     }
 
     function testCreatOrg() public {
@@ -64,11 +70,11 @@ contract SBFactoryTest is BaseTest {
     function testCreateBounty() public {
 
         Org redCross = factory.orgs(0);
-        uint256 bountyDeadline = block.timestamp + 7 days;
+        uint256 bountyDeadline = block.timestamp + 8 days;
         redCross.createBounty(
-            "Safe transport of vaccines in Libya",
-            1e16,
-            block.timestamp + 7 days
+            "Funding alex P - Tornado Cash dev",
+            15e15,
+            block.timestamp + 8 days
         );
 
         (
@@ -76,10 +82,10 @@ contract SBFactoryTest is BaseTest {
             uint256 stakeReqd,
             uint256 deadline,
             bool open
-        ) = redCross.bounties(2);
+        ) = redCross.bounties(3);
 
-        assertEq(title, "Safe transport of vaccines in Libya");
-        assertEq(stakeReqd, 1e16);
+        assertEq(title, "Funding alex P - Tornado Cash dev");
+        assertEq(stakeReqd, 15e15);
         assertEq(deadline, bountyDeadline);
         assertEq(open, false);
     }
@@ -234,9 +240,7 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
 
         vm.startPrank(bob);
-
         uint256 bal0 = ERC20(WETH).balanceOf(bob);
-
         (bool success, ) = WETH.call(
             abi.encodeWithSignature(
                 "approve(address,uint256)",
@@ -245,15 +249,10 @@ contract SBFactoryTest is BaseTest {
             )
         );
         assertTrue(success);
-
-        console.log("Allowance: ", ERC20(WETH).allowance(bob, orgRouterAddress));
-
         redCross.applyToBounty(1, WETH, 1e18);
-
         vm.stopPrank();
 
         uint256 bal1 = ERC20(WETH).balanceOf(bob);
-
         ( Org.AppStatus status ) = redCross.applicantStatus(1, bob);
         assertEq(uint256(status), 1);
 
@@ -284,8 +283,76 @@ contract SBFactoryTest is BaseTest {
 
         vm.expectRevert("ERROR: admin cannot apply to own bounty");
         redCross.applyToBounty(1, USDC, 1200e6);
+    }
+
+    function testSubmitBounty() external {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+
+        (bool success, ) = WETH.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                2e18
+            )
+        );
+
+        redCross.applyToBounty(1, WETH, 2e18);
+        redCross.submitBounty(1, keccak256("test"));
+        vm.stopPrank();
+
+        ( Org.AppStatus status ) = redCross.applicantStatus(1, bob);
+        assertEq(uint256(status), 1);
+
+        ( bytes32 ipfsHash ) = redCross.submittedHashes(1, bob);
+        assertEq(ipfsHash, keccak256("test"));
+
+    }
+
+    function testSubmitBounty_noApplyFail() external {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+
+        (bool success, ) = WETH.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                1e18
+            )
+        );
+
+        redCross.applyToBounty(1, WETH, 1e18);
+
+        vm.expectRevert("ERROR: applicant must have applied");
+        redCross.submitBounty(2, keccak256("test"));
 
         vm.stopPrank();
+    }
+
+    function testSubmitBounty_deadlinePassedFail() external {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+        (bool success, ) = WETH.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                2e18
+            )
+        );
+        redCross.applyToBounty(1, WETH, 2e18);
+        skip(7 days);
+
+        vm.expectRevert("ERROR: deadline passed");
+        redCross.submitBounty(1, keccak256("test"));
+
+        vm.stopPrank();
+    }
+
+    function testVerifyBounty_sucess() external {
+        assertTrue(true);
     }
 
     /**************************************************************************

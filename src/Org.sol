@@ -58,7 +58,7 @@ contract Org is AccessControl {
 
     modifier prelimChecks(uint256 _bountyId) {
         require(bounties[_bountyId].open, "ERROR: bounty must be open");
-        require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
+        require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline passed");
         _;
     }
 
@@ -106,7 +106,7 @@ contract Org is AccessControl {
 
         require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
 
-        bounties[bountyId.current()].open = true;
+        bounties[_bountyId].open = true;
     }
 
     /**
