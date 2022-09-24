@@ -351,9 +351,74 @@ contract SBFactoryTest is BaseTest {
         vm.stopPrank();
     }
 
-    function testVerifyBounty_sucess() external {
-        assertTrue(true);
+    function testVerifyBounty_success() external {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+        (bool success, ) = WETH.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                2e18
+            )
+        );
+        redCross.applyToBounty(1, WETH, 2e18);
+        redCross.submitBounty(1, keccak256("test"));
+        vm.stopPrank();
+
+        redCross.verifyBounty(1, bob, true);
+
+        ( Org.AppStatus status ) = redCross.applicantStatus(1, bob);
+        assertEq(uint256(status), 2);
     }
+
+    function testVerifyBounty_reject() external {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+        (bool success, ) = WETH.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                2e18
+            )
+        );
+        redCross.applyToBounty(1, WETH, 2e18);
+        redCross.submitBounty(1, keccak256("test"));
+        vm.stopPrank();
+
+        redCross.verifyBounty(1, bob, false);
+
+        ( Org.AppStatus status ) = redCross.applicantStatus(1, bob);
+        assertEq(uint256(status), 3);
+    }
+
+    function testVerifyBounty_noApplication() external {
+        Org redCross = factory.orgs(0);
+
+        vm.expectRevert("ERROR: applicant must have applied");
+        redCross.verifyBounty(2, bob, true);
+    }
+
+    function testVerifyBounty_noSubmitFail() external {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+        (bool success, ) = WETH.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                2e18
+            )
+        );
+        redCross.applyToBounty(1, WETH, 2e18);
+        vm.stopPrank();
+
+        vm.expectRevert("ERROR: applicant must have submitted");
+        redCross.verifyBounty(1, bob, true);
+    }
+
+
 
     /**************************************************************************
      *                                HELPERS                                 *

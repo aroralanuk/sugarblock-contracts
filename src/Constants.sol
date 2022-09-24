@@ -14,3 +14,4 @@ address constant UNI_POOL = 0xa63b490aA077f541c9d64bFc1Cc0db2a752157b5;
 // constant coefficients
 uint256 constant SLIPPAGE_TOLERANCE = 1e17;      // out of 1e18
 uint256 constant POOL_FEE = 3000;               // out  of 1e6
+uint256 constant VERIFY_PERIOD = 7 days;

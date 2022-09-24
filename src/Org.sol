@@ -2,9 +2,12 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 import { AccessControl } from "./OrgAdmin.sol";
 import { OrgRouter } from "./util/OrgRouter.sol";
+
+import { USDC, VERIFY_PERIOD } from "./Constants.sol";
 
 import "forge-std/console.sol";
 
@@ -36,6 +39,7 @@ contract Org is AccessControl {
     mapping(uint256 => mapping(address => AppStatus)) public applicantStatus;
     mapping(uint256 => mapping(address => bytes32)) public submittedHashes;
     mapping(uint256 => mapping(address => uint256)) public donations;
+    mapping(uint256 => uint256) public bountyPool;
 
     OrgRouter public orgRouter;
 
@@ -126,7 +130,8 @@ contract Org is AccessControl {
         orgRouter.setinputToken(_depositTokenAddress);
         uint256 amountOut = orgRouter.swapExactInputSingle(_amount, msg.sender);
 
-        donations[_bountyId][msg.sender] += amountOut;
+        donations[_bountyId][msg.sender] += amountOut; // TODO: don't need this: give equal ERC20 cTokens
+        bountyPool[_bountyId] += amountOut;
     }
 
     /**
@@ -153,6 +158,7 @@ contract Org is AccessControl {
 
         applicantStatus[_bountyId][msg.sender] = AppStatus.APPLIED;
         bounties[_bountyId].applicants.push(msg.sender);
+        bountyPool[_bountyId] += amountIn;
 
     }
 
@@ -190,6 +196,51 @@ contract Org is AccessControl {
             applicantStatus[_bountyId][_applicant] == AppStatus.APPLIED, "ERROR: applicant must have applied"
         );
 
-        applicantStatus[_bountyId][_applicant] = AppStatus(_verified ? 3 : 4);
+        require(
+            submittedHashes[_bountyId][_applicant] != bytes32(0),
+            "ERROR: applicant must have submitted"
+        );
+
+        applicantStatus[_bountyId][_applicant] = AppStatus(_verified ? 2 : 3);
+    }
+
+    /**
+     * @notice Closes a bounty
+     * @param _bountyId Id of the bounty to apply to
+     */
+    function closeBounty(uint256 _bountyId) public onlyAdmin {
+
+        require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
+
+        bounties[_bountyId].open = false;
+    }
+
+    /**
+     * @notice Distributes rewards to verified and undecided applicants
+     * @param _bountyId Id of the bounty to apply to
+     */
+    function distirbuteRewards(uint256 _bountyId) public {
+
+        require(bounties[_bountyId].deadline + VERIFY_PERIOD < block.timestamp, "ERROR: verify period not over");
+
+        uint256 numVerified = 0;
+        AppStatus appState;
+
+        address[] memory appPool = bounties[_bountyId].applicants;
+        for (uint256 i = 0; i < appPool.length; i++) {
+            appState = applicantStatus[_bountyId][appPool[i]];
+            if (appState == AppStatus.VERIFIED || appState == AppStatus.APPLIED) {
+                numVerified++;
+            }
+        }
+
+        uint256 reward = bountyPool[_bountyId] / numVerified;
+
+        for (uint256 i = 0; i < appPool.length; i++) {
+            appState = applicantStatus[_bountyId][appPool[i]];
+            if (appState == AppStatus.VERIFIED || appState == AppStatus.APPLIED) {
+                ERC20(USDC).transfer(appPool[i], reward);
+            }
+        }
     }
 }
