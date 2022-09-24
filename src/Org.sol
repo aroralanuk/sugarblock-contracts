@@ -190,7 +190,7 @@ contract Org is AccessControl {
         uint _bountyId,
         address _applicant,
         bool _verified
-    ) prelimChecks(_bountyId) external onlyAdmin {
+    ) external onlyAdmin {
 
         require(
             applicantStatus[_bountyId][_applicant] == AppStatus.APPLIED, "ERROR: applicant must have applied"
@@ -209,8 +209,11 @@ contract Org is AccessControl {
      * @param _bountyId Id of the bounty to apply to
      */
     function closeBounty(uint256 _bountyId) public onlyAdmin {
-
-        require(bounties[_bountyId].deadline > block.timestamp, "ERROR: deadline must be in the future");
+        require(
+            bounties[_bountyId].applicants.length == 0 ||
+            bounties[_bountyId].deadline <= block.timestamp,
+            "ERROR: already has applicants."
+        );
 
         bounties[_bountyId].open = false;
     }

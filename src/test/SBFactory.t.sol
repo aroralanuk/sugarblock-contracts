@@ -418,6 +418,40 @@ contract SBFactoryTest is BaseTest {
         redCross.verifyBounty(1, bob, true);
     }
 
+    function testCloseBounty() external {
+        Org redCross = factory.orgs(0);
+        redCross.closeBounty(1);
+
+        ( , , , bool open ) = redCross.bounties(1);
+        assertEq(open, false);
+    }
+
+    function testCloseBounty_deadlineSuccess() external {
+        Org redCross = factory.orgs(0);
+
+        vm.startPrank(bob);
+        (bool success, ) = WETH.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                2e18
+            )
+        );
+        redCross.applyToBounty(1, WETH, 2e18);
+        redCross.submitBounty(1, keccak256("test"));
+        vm.stopPrank();
+
+        skip(7 days);
+        redCross.verifyBounty(1, bob, true);
+        redCross.closeBounty(1);
+
+        ( , , , bool open ) = redCross.bounties(1);
+        assertEq(open, false);
+    }
+
+    function testDistributeRewards() external {
+
+    }
 
 
     /**************************************************************************
