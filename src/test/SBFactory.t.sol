@@ -122,18 +122,8 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
 
         vm.startPrank(adele);
-
-        (bool success, ) = USDC.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                1200e6
-            )
-        );
-        assertTrue(success);
-
+        _approveERC20(USDC, 1200e6);
         redCross.donateToBounty(1, USDC, 1000e6);
-
         vm.stopPrank();
 
         ( uint256 amount ) = redCross.donations(1, adele);
@@ -145,18 +135,8 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
 
         vm.startPrank(adele);
-
-        (bool success, ) = DAI.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                1200e6
-            )
-        );
-        assertTrue(success);
-
+        _approveERC20(DAI, 1200e6);
         redCross.donateToBounty(1, DAI, 1000e6);
-
         vm.stopPrank();
 
         ( uint256 amount ) = redCross.donations(1, adele);
@@ -180,18 +160,8 @@ contract SBFactoryTest is BaseTest {
 
 
         vm.startPrank(adele);
-
-        (bool success, ) = WETH.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                1e18
-            )
-        );
-        assertTrue(success);
-
+        _approveERC20(WETH, 1e18);
         redCross.donateToBounty(1, WETH, 1e18);
-
         vm.stopPrank();
 
         ( uint256 amount ) = redCross.donations(1, adele);
@@ -241,14 +211,7 @@ contract SBFactoryTest is BaseTest {
 
         vm.startPrank(bob);
         uint256 bal0 = ERC20(WETH).balanceOf(bob);
-        (bool success, ) = WETH.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                1e18
-            )
-        );
-        assertTrue(success);
+        _approveERC20(WETH, 1e18);
         redCross.applyToBounty(1, WETH, 1e18);
         vm.stopPrank();
 
@@ -271,16 +234,7 @@ contract SBFactoryTest is BaseTest {
 
     function testApply_AdminFail() external {
         Org redCross = factory.orgs(0);
-
-        (bool success, ) = USDC.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                1200e6
-            )
-        );
-        assertTrue(success);
-
+        _approveERC20(USDC, 1200e6);
         vm.expectRevert("ERROR: admin cannot apply to own bounty");
         redCross.applyToBounty(1, USDC, 1200e6);
     }
@@ -289,15 +243,7 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
 
         vm.startPrank(bob);
-
-        (bool success, ) = WETH.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                2e18
-            )
-        );
-
+        _approveERC20(WETH, 2e18);
         redCross.applyToBounty(1, WETH, 2e18);
         redCross.submitBounty(1, keccak256("test"));
         vm.stopPrank();
@@ -314,15 +260,7 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
 
         vm.startPrank(bob);
-
-        (bool success, ) = WETH.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                1e18
-            )
-        );
-
+        _approveERC20(WETH, 1e18);
         redCross.applyToBounty(1, WETH, 1e18);
 
         vm.expectRevert("ERROR: applicant must have applied");
@@ -404,13 +342,7 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
 
         vm.startPrank(bob);
-        (bool success, ) = WETH.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                2e18
-            )
-        );
+        _approveERC20(WETH, 2e18);
         redCross.applyToBounty(1, WETH, 2e18);
         vm.stopPrank();
 
@@ -430,13 +362,7 @@ contract SBFactoryTest is BaseTest {
         Org redCross = factory.orgs(0);
 
         vm.startPrank(bob);
-        (bool success, ) = WETH.call(
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                orgRouterAddress,
-                2e18
-            )
-        );
+        _approveERC20(WETH, 2e18);
         redCross.applyToBounty(1, WETH, 2e18);
         redCross.submitBounty(1, keccak256("test"));
         vm.stopPrank();
@@ -449,14 +375,117 @@ contract SBFactoryTest is BaseTest {
         assertEq(open, false);
     }
 
-    function testDistributeRewards() external {
+    function testDistributeReward_OneSubmission() external {
+        Org redCross = factory.orgs(0);
+        uint256 bal0;
+        uint256 bal1;
 
+        vm.startPrank(bob);
+        _approveERC20(WETH, 2E18);
+        redCross.applyToBounty(1, WETH, 2e18);
+        bal0 = ERC20(USDC).balanceOf(bob);
+        redCross.submitBounty(1, keccak256("test"));
+        vm.stopPrank();
+
+        skip(7 days);
+        redCross.verifyBounty(1, bob, true);
+        skip(7 days + 1);
+        redCross.distributeRewards(1);
+
+        bal1 = ERC20(USDC).balanceOf(bob);
+
+        assertEq(ERC20(USDC).balanceOf(address(redCross)), 0);
+        assertEq(bal1 - bal0, 1000e6);
     }
+
+    function testDistributeReward_OneSubmissionDonation() external {
+        Org redCross = factory.orgs(0);
+        uint256 bal0;
+        uint256 bal1;
+
+        vm.startPrank(bob);
+        _approveERC20(WETH, 2E18);
+        redCross.applyToBounty(1, WETH, 2e18);
+        bal0 = ERC20(USDC).balanceOf(bob);
+        redCross.submitBounty(1, keccak256("test"));
+        vm.stopPrank();
+
+        vm.startPrank(adele);
+        _approveERC20(WETH, 1e18);
+        redCross.donateToBounty(1, WETH, 1e18);
+        vm.stopPrank();
+
+        skip(7 days);
+        redCross.verifyBounty(1, bob, true);
+        skip(7 days + 1);
+        redCross.distributeRewards(1);
+
+        bal1 = ERC20(USDC).balanceOf(bob);
+
+        assertEq(ERC20(USDC).balanceOf(address(redCross)), 0);
+        assertApproxEqRel(
+            bal1 - bal0,
+            1000e6 + _quotePrice(WETH, USDC, 1e18),
+            SLIPPAGE_TOLERANCE
+        );
+    }
+
+    function testDistributeReward_MultipleSubmissionDonation() external {
+        Org redCross = factory.orgs(0);
+        uint256 bal0;
+        uint256 bal1;
+
+        vm.startPrank(bob);
+        _approveERC20(WETH, 2E18);
+        redCross.applyToBounty(1, WETH, 2e18);
+        bal0 = ERC20(USDC).balanceOf(bob);
+        redCross.submitBounty(1, keccak256("test"));
+        vm.stopPrank();
+
+        vm.startPrank(chester);
+        _approveERC20(USDC, 1200e6);
+        redCross.applyToBounty(1, USDC, 2e18);
+        // bal0 = ERC20(USDC).balanceOf(bob);
+        redCross.submitBounty(1, keccak256("test"));
+        vm.stopPrank();
+
+        vm.startPrank(adele);
+        _approveERC20(WETH, 1e18);
+        redCross.donateToBounty(1, WETH, 1e18);
+        vm.stopPrank();
+
+        skip(7 days);
+        redCross.verifyBounty(1, bob, true);
+        redCross.verifyBounty(1, chester, true);
+        skip(7 days + 1);
+        redCross.distributeRewards(1);
+
+        bal1 = ERC20(USDC).balanceOf(bob);
+
+        assertEq(ERC20(USDC).balanceOf(address(redCross)), 0);
+        assertApproxEqRel(
+            bal1 - bal0,
+            1000e6 + _quotePrice(WETH, USDC, 1e18) / 2,
+            SLIPPAGE_TOLERANCE
+        );
+    }
+
+
 
 
     /**************************************************************************
      *                                HELPERS                                 *
      *************************************************************************/
+
+    function _approveERC20(address _token, uint256 _amount) internal returns (bool success){
+        (bool success, ) = _token.call(
+            abi.encodeWithSignature(
+                "approve(address,uint256)",
+                orgRouterAddress,
+                _amount
+            )
+        );
+    }
 
     function _depositWeth(address recipient, uint256 ethAmount) internal {
         // check that VB has no WETH balance

@@ -158,7 +158,7 @@ contract Org is AccessControl {
 
         applicantStatus[_bountyId][msg.sender] = AppStatus.APPLIED;
         bounties[_bountyId].applicants.push(msg.sender);
-        bountyPool[_bountyId] += amountIn;
+        bountyPool[_bountyId] += bounties[_bountyId].stakeReqd;
 
     }
 
@@ -222,9 +222,10 @@ contract Org is AccessControl {
      * @notice Distributes rewards to verified and undecided applicants
      * @param _bountyId Id of the bounty to apply to
      */
-    function distirbuteRewards(uint256 _bountyId) public {
+    function distributeRewards(uint256 _bountyId) public {
 
         require(bounties[_bountyId].deadline + VERIFY_PERIOD < block.timestamp, "ERROR: verify period not over");
+        closeBounty(_bountyId);
 
         uint256 numVerified = 0;
         AppStatus appState;
@@ -238,6 +239,7 @@ contract Org is AccessControl {
         }
 
         uint256 reward = bountyPool[_bountyId] / numVerified;
+        console.log("reward: ", bountyPool[_bountyId]);
 
         for (uint256 i = 0; i < appPool.length; i++) {
             appState = applicantStatus[_bountyId][appPool[i]];

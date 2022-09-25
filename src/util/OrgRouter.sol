@@ -105,15 +105,9 @@ contract OrgRouter {
         // Transfer the specified amount of input token to this contract.
         TransferHelper.safeTransferFrom(inputToken, applicant, address(this), amountInMaximum);
 
-        console.log("amount with org Router: ", ERC20(inputToken).balanceOf(address(this)));
-
-
         // Approve the router to spend the specifed `amountInMaximum` of input token.
         // In production, you should choose the maximum amount to spend based on oracles or other data sources to acheive a better swap.
         TransferHelper.safeApprove(inputToken, address(swapRouter), amountInMaximum);
-
-        console.log("Allowance for uni router: ", inputERC20.allowance(address(this), address(swapRouter)));
-        console.log("from org router: ", address(this), " to ", address(swapRouter));
 
         ISwapRouter.ExactOutputSingleParams memory params =
             ISwapRouter.ExactOutputSingleParams({
@@ -127,13 +121,8 @@ contract OrgRouter {
                 sqrtPriceLimitX96: 0
             });
 
-        console.log("DIS WOKRING", amountIn);
-
-
         // Executes the swap returning the amountIn needed to spend to receive the desired amountOut.
         amountIn = swapRouter.exactOutputSingle(params);
-
-        console.log("DIS also  WORKING");
 
         // For exact output swaps, the amountInMaximum may not have all been spent.
         // If the actual amount spent (amountIn) is less than the specified maximum amount, we must refund the applicant and approve the swapRouter to spend 0.
